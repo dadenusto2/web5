@@ -20,7 +20,7 @@ if (!empty($_SESSION['login'])) {
   // TODO: Сделать выход (окончание сессии вызовом session_destroy()
   //при нажатии на кнопку Выход).
   // Делаем перенаправление на форму.
-  header('Location: ./');
+  header('Location: index.php');
 }
 
 // В суперглобальном массиве $_SERVER PHP сохраняет некторые заголовки запроса HTTP
@@ -103,60 +103,26 @@ else {
       header('Location: login.php');
       exit();
     }
-    else{
-    setcookie('login_error', '', 100000);
-    setcookie('pass_error', '', 100000);
-    $login = $_POST['login'];
-    $pass = $_POST['pass'];
-    $user = 'u20295';
-    $password = '7045626';
-    $db = new PDO('mysql:host=localhost;dbname=u20295', $user, $password);
-    extract($_POST);
-    try {
-      foreach($db->query('SELECT * FROM anketa') as $row){
-        if($row['login']==$_POST['login']){//если логины совпадают проверяем пароли
-          /*проверка хэшированого пароля
-           возникает непонятная ошибка при которой происходит вход, но из БД данные НЕ переносятся
-           и поля в form.php остаются пустыми(при проверка обычного пароля без хэширования такой ошибки нет),
-           но при этом если начать редактировать поля, в БД они вносятся
-          if(password_verify($_POST['pass'], $row['password'])){*/
-          if($row['password']==$_POST['pass']){//успешно
-            $_SESSION['login'] = $_POST['login'];
-            // Записываем ID пользователя.
-            $_SESSION['uid'] = $_POST['pass'];
-            // Делаем перенаправление.
-            $values['inName'] = $row['name'];
-            $values['inEmail'] = $row['email'];
-            $values['inDate'] = $row['date'];
-            $values['inGender'] = $row['gender'];
-            $values['inLimb'] = $row['limb'];
-            $values['inSup1'] = $row['super1'];
-            $values['inSup2'] = $row['super2'];
-            $values['inSup3'] = $row['super3'];
-            $values['inMessage'] = $row['message'];
-            $values['checker'] = $row['checker'];
-            setcookie('save', '1');
-            header('Location: index.php');
-          }
-          else{//неверный пароль
-            $errors = TRUE;
-            setcookie('pass_error', '1s', time() + 24 * 60 * 60);
-          }
-        }
+    else {
+      try {
+        //setcookie('loginConnect_error', '1', time() + 24 * 60 * 60);
+        $db = new PDO('mysql:host=localhost;dbname=u20295', 'u20295', '7045626');
+        $row=$db->query("SELECT login FROM anketa where login='".(string)$_POST['login']."' AND password='".(string)md5($_POST['pass'])."'")->fetch();
+        $db = null;
+      }
+      catch(PDOException $e){}
+      if (!empty($row)) {
+        // Если все ок, то авторизуем пользователя.
+        $_SESSION['login'] = (string)$_POST['login'];
+        $_SESSION['pass'] = (string)md5($_POST['pass']);
+        // Записываем ID пользователя.
+        $_SESSION['uid'] = $_SESSION['login'];
+        // Делаем перенаправление..
+        header('Location: index.php');
+      }
+      else{
+        setcookie('login_error', '1', time() + 24 * 60 * 60);
+        header('Location: login.php'); 
       }
     }
-    catch(PDOException $e){
-      print('Error : ' . $e->getMessage());
-      exit();
-    }
-    setcookie('save', '1');
-    //если пришел сюда, то введеного логина в БД нет
-    $errors = TRUE;
-    setcookie('login_error', '1', time() + 24 * 60 * 60);
-    if ($errors) {
-      // При наличии ошибок перезагружаем страницу и завершаем работу скрипта.
-      header('Location: login.php');
-      exit();
-    }
   }
-}

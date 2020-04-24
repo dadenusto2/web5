@@ -8,6 +8,7 @@
 // Отправляем браузеру правильную кодировку,
 // файл index.php должен быть в кодировке UTF-8 без BOM.
 header('Content-Type: text/html; charset=UTF-8');
+session_start();
 // В суперглобальном массиве $_SERVER PHP сохраняет некторые заголовки запроса HTTP
 // и другие сведения о клиненте и сервере, например метод текущего запроса $_SERVER['REQUEST_METHOD'].
 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
@@ -18,8 +19,6 @@ $messages = array();
   if (!empty($_COOKIE['save'])) {
     // Удаляем куку, указывая время устаревания в прошлом.
     setcookie('save', '', 100000);
-    setcookie('login', '', 100000);
-    setcookie('pass', '', 100000);
     // Выводим сообщение пользователю.
     $messages[] = 'Спасибо, результаты сохранены.';
     // Если в куках есть пароль, то выводим сообщение.
@@ -104,37 +103,27 @@ $messages = array();
   // Если нет предыдущих ошибок ввода, есть кука сессии, начали сессию и
   // ранее в сессию записан факт успешного логина.
 
-  session_start();
-  if ($errors && !empty($_COOKIE[session_name()]) && !empty($_SESSION['login'])) {
-    $login = $_SESSION['login'];
-    $pass = $_SESSION['uid'];
-    $user = 'u20295';
-    $password = '7045626';
-    $db = new PDO('mysql:host=localhost;dbname=u20295', $user, $password);
-    try {
-      foreach($db->query('SELECT * FROM anketa') as $row){
-        if($row['login'] == $login){
-          if($row['password'] == $pass){
-            $values['inName'] = $row['name'];
-            $values['inEmail'] = $row['email'];
-            $values['inDate'] = $row['date'];
-            $values['inGender'] = $row['gender'];
-            $values['inLimb'] = $row['limb'];
-            $values['inSup1'] = strip_tags($row['super1']);
-            $values['inSup2'] = strip_tags($row['super2']);
-            $values['inSup3'] = strip_tags($row['super3']);
-            $values['inMessage'] = strip_tags($row['message']);
-            $values['checker'] = $row['checker'];
-            printf('Вход с логином %s, uid %d.', $_SESSION['login'], $_SESSION['uid']);
-            break;
-          }
-        }
-      }
+  if (!empty($_SESSION['login'])) {
+    // TODO: загрузить данные пользователя из БД  
+    $db = new PDO('mysql:host=localhost;dbname=u20295', 'u20295', '7045626');
+    try{
+    	$row=$db->query("SELECT * FROM anketa where login='".$_SESSION['login']."'")->fetch();
+    	$values['inName'] =strip_tags($row['name']);
+    	$values['inEmail'] = strip_tags($row['email']);
+    	$values['inDate'] = strip_tags($row['date']);
+    	$values['inGender'] = strip_tags($row['gender']);
+    	$values['inLimb'] = strip_tags($row['limb']);
+    	$values['inSup1'] =strip_tags($row['super1']);
+    	$values['inSup2'] = strip_tags($row['super2']);
+    	$values['inSup3'] = strip_tags($row['super3']);
+      $values['inMessage'] = strip_tags($row['message']);
+   		$values['checker'] = strip_tags($row['checker']);
     }
-    catch(PDOException $e){
-    print('Error : ' . $e->getMessage());
-    exit();
-    }
+		catch(PDOException $e){}
+		$db = null;
+    // и заполнить переменную $values,
+    // предварительно санитизовав.
+    printf('Вход с логином %s, uid %d.', $_SESSION['login'], $_SESSION['uid']);
   }
     // Включаем содержимое файла form.php.
     // В нем будут доступны переменные $messages, $errors и $values для вывода 
@@ -144,74 +133,42 @@ $messages = array();
 // Иначе, если запрос был методом POST, т.е. нужно проверить данные и сохранить их в XML-файл.
 else{
   $action = $_POST['save'];
-  switch ($action){
-    case 'выйти':{//выходим из сессии и возвращаемся к index.php
-      $values = array();
-      $values['inName'] = null;
-      $values['inEmail'] = null;
-      $values['inDate'] = null;
-      $values['inGender'] = null;
-      $values['inLimb'] = null;
-      $values['inSup1'] = null;
-      $values['inSup2'] = null;
-      $values['inSup3'] = null;
-      $values['inMessage'] = null;
-      $values['checker'] = null;
-      session_start();
-      if(!empty($_SESSION['login'])){
-          setcookie('save', '', 100000);
-          setcookie('login', '', 100000);
-          setcookie('pass', '', 100000);
-          setcookie('inName_value', '', 100000);
-          setcookie('inEmail_value', '', 100000);
-          setcookie('inDate_value', '', 100000);
-          setcookie('inGender_value', '', 100000);
-          setcookie('inLimb_value', '', 100000);
-          setcookie('inSup1_value', '', 100000);
-          setcookie('inSup2_value', '', 100000);
-          setcookie('inSup3_value', '', 100000);
-          setcookie('inMessage_value', '', 100000);
-          setcookie('checker_value', '', 100000);
-          $_COOKIE=array();
-      }
-      session_destroy();
+  if($_POST['save'] =='выйти'){//выходим из сессии и возвращаемся к index.php
+    $values = array();
+    $values['inName'] = null;
+    $values['inEmail'] = null;
+    $values['inDate'] = null;
+    $values['inGender'] = null;
+    $values['inLimb'] = null;
+    $values['inSup1'] = null;
+    $values['inSup2'] = null;
+    $values['inSup3'] = null;
+    $values['inMessage'] = null;
+    $values['checker'] = null;
+    if(!empty($_SESSION['login'])){
+      setcookie('save', '', 100000);
+      setcookie('login', '', 100000);
+      setcookie('pass', '', 100000);
+      setcookie('inName_value', '', 100000);
+      setcookie('inEmail_value', '', 100000);
+      setcookie('inDate_value', '', 100000);
+      setcookie('inGender_value', '', 100000);
+      setcookie('inLimb_value', '', 100000);
+      setcookie('inSup1_value', '', 100000);
+      setcookie('inSup2_value', '', 100000);
+      setcookie('inSup3_value', '', 100000);
+      setcookie('inMessage_value', '', 100000);
+      setcookie('checker_value', '', 100000);
+      $_COOKIE=array();
+  }
+    session_destroy();
       header('Location: index.php');
-      break;
     }
-    case 'войти':{//выходим из сессии и логинимся в login.php
-      $values = array();
-      $values['inName'] = null;
-      $values['inEmail'] = null;
-      $values['inDate'] = null;
-      $values['inGender'] = null;
-      $values['inLimb'] = null;
-      $values['inSup1'] = null;
-      $values['inSup2'] = null;
-      $values['inSup3'] = null;
-      $values['inMessage'] = null;
-      $values['checker'] = null;
-      session_start();
-      if(!empty($_SESSION['login'])){
-          setcookie('save', '', 100000);
-          setcookie('login', '', 100000);
-          setcookie('pass', '', 100000);
-          setcookie('inName_value', '', 100000);
-          setcookie('inEmail_value', '', 100000);
-          setcookie('inDate_value', '', 100000);
-          setcookie('inGender_value', '', 100000);
-          setcookie('inLimb_value', '', 100000);
-          setcookie('inSup1_value', '', 100000);
-          setcookie('inSup2_value', '', 100000);
-          setcookie('inSup3_value', '', 100000);
-          setcookie('inMessage_value', '', 100000);
-          setcookie('checker_value', '', 100000);
-          $_COOKIE=array();
-      }
+    if($_POST['save'] =='войти'){//выходим из сессии и логинимся в login.php
       session_destroy();
       header('Location: login.php');
-      break;
     }
-    case 'сохранить':{//сохраняем данные
+    if($_POST['save'] =='сохранить'){//сохраняем данные
       // Проверяем ошибки.
       $errors = FALSE;  
       $messages[]='ok';
@@ -368,8 +325,8 @@ else{
         $b=TRUE;
         try {
           while($b){
-            $login = rand(1, 200);
-            $pass = rand(1, 100);
+            $login = (string)rand(1, 200);
+            $pass = (string)rand(1, 100);
             $b=FALSE;
             foreach($db->query('SELECT login FROM anketa') as $row){
               if($row['login']==$login){
@@ -390,8 +347,8 @@ else{
         $user = 'u20295';
         $password = '7045626';
         $db = new PDO('mysql:host=localhost;dbname=u20295', $user, $password);
-        /*хэширование пароля
-        $hash = password_hash($pass, PASSWORD_BCRYPT); */
+        /*хэширование пароля*/
+        $hash = (string)md5($pass);
         $name = $_POST['inName'];
         $email = $_POST['inEmail'];
         $date = $_POST['inDate'];
@@ -420,9 +377,9 @@ else{
         try {
           $sth = $db->prepare("INSERT INTO anketa (login, password, name, email, date, gender, limb, super1, super2, super3, message, checker) VALUES (:login, :pass, :name, :email, :date, :gender, :limb, :super1, :super2, :super3, :message, :checker)");
           $sth->bindParam(':login', $login, PDO::PARAM_INT);
-          /*внесение в базу хэшированого пароля
-          $sth->bindParam(':pass', $hash);*/
-          $sth->bindParam(':pass', $pass);
+         // внесение в базу хэшированого пароля
+          $sth->bindParam(':pass', $hash);
+          //$sth->bindParam(':pass', $pass);
           $sth->bindParam(':name', $name);
           $sth->bindParam(':email', $email);
           $sth->bindParam(':date', $date);
@@ -446,4 +403,3 @@ else{
       header('Location: index.php');
     }
   }
-}
